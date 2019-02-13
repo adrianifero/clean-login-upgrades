@@ -1,7 +1,7 @@
 <?php
 /**
  * @package Clean_Login
- * @version 1.9.8a
+ * @version 1.9.8b
  */
 /*
 Plugin Name: Clean Login
@@ -292,8 +292,14 @@ function clean_login_load_before_headers() {
 					// Check if multisite and redirect:
 					if ( is_multisite() ):
 					
+						$current_blog_id = get_current_blog_id();
+						
+					
 						$user_blogs = get_blogs_of_user( $user->ID );
-						$found_user = false;
+						$user_blogs_ids = array();
+					
+						// Add blog id if user has a role in site:
+						// Can be expanded to check for a specific role
 						foreach ( $user_blogs AS $blog ):
 							$blog_id = $blog->userblog_id;
 							
@@ -308,21 +314,35 @@ function clean_login_load_before_headers() {
 							// Check if user has roles in either site:
 							if ( !empty($get_users_obj[0]->roles) ):
 					
-								// Change blog and redirect url:
-								$url = get_site_url( $blog_id );
-								switch_to_blog( $blog_id );
-					
-								$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
-								$found_user = true;
-
-								break;
+								$user_blogs_ids[] = $blog_id;
 					
 							endif;
 					
 						endforeach;
 					
-						// User doesn't have any roles in any of the sites:
-						if ( $found_user == false ):
+						if ( !empty( $user_blogs_ids ) ):
+					
+							// Redirect to current blog if user has access or to the first blog that user has access to:
+							if ( in_array( $current_blog_id, $user_blogs_ids ) ):
+					
+								$url = $url; // wp_get_referer() already set
+									
+							else: 
+							
+								$url = get_site_url( $user_blogs_ids[0] );
+								switch_to_blog( $user_blogs_ids[0] );
+
+					
+							endif;
+					
+							// Change blog and redirect url:
+							
+							$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
+							$found_user = true;
+					
+					
+						else:
+							// User doesn't have any roles in any of the sites:
 							wp_logout();
 							$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
 						endif;
