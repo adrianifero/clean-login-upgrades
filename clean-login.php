@@ -1,7 +1,7 @@
 <?php
 /**
  * @package Clean_Login
- * @version 1.9.8
+ * @version 1.9.8a
  */
 /*
 Plugin Name: Clean Login
@@ -288,13 +288,57 @@ function clean_login_load_before_headers() {
 				if ( is_wp_error( $user ) )
 					$url = esc_url( add_query_arg( 'authentication', 'failed', $url ) );
 				else {
-					// if the user is disabled
-					if( empty($user->roles) ) {
-						wp_logout();
-						$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
-					}
-					else 
-						$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
+					
+					// Check if multisite and redirect:
+					if ( is_multisite() ):
+					
+						$user_blogs = get_blogs_of_user( $user->ID );
+						$found_user = false;
+						foreach ( $user_blogs AS $blog ):
+							$blog_id = $blog->userblog_id;
+							
+
+							$get_users_obj = get_users(
+								array(
+									'blog_id' => $blog_id,
+									'search'  => $user->ID
+								)
+							);
+					
+							// Check if user has roles in either site:
+							if ( !empty($get_users_obj[0]->roles) ):
+					
+								// Change blog and redirect url:
+								$url = get_site_url( $blog_id );
+								switch_to_blog( $blog_id );
+					
+								$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
+								$found_user = true;
+
+								break;
+					
+							endif;
+					
+						endforeach;
+					
+						// User doesn't have any roles in any of the sites:
+						if ( $found_user == false ):
+							wp_logout();
+							$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
+						endif;
+					
+					else:
+					// Not multisite: 
+					
+						// if the user is disabled
+						if( empty($user->roles) ) {
+							wp_logout();
+							$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
+						}
+						else { 
+							$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
+						}
+					endif; 
 				}
 					
 
