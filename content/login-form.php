@@ -10,7 +10,7 @@
 			
 		<fieldset>
 			<div class="cleanlogin-field">
-				<input class="cleanlogin-field-username" type="text" name="log" placeholder="<?php echo __( 'Email or Username', 'clean-login' ); ?>">
+				<input class="cleanlogin-field-username" type="text" name="log" placeholder="<?php echo __( 'Username', 'clean-login' ); ?>">
 			</div>
 			
 			<div class="cleanlogin-field">
