@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Clean_Login
- * @version 1.9.8b
+ * @version 1.9.9b
  */
 /*
 Plugin Name: Clean Login
 Plugin URI: http://cleanlogin.codection.com
 Description: Responsive Frontend Login and Registration plugin. A plugin for displaying login, register, editor and restore password forms through shortcodes. [clean-login] [clean-login-edit] [clean-login-register] [clean-login-restore]
 Author: codection
-Version: 1.9.8
+Version: 1.9.9
 Author URI: https://codection.com
 Text Domain: clean-login
 Domain Path: /lang
@@ -285,11 +285,15 @@ function clean_login_load_before_headers() {
 				//$url = clean_login_get_translated_option_page( 'cl_login_url','');
 				
 				$user = wp_signon();
-				if ( is_wp_error( $user ) )
+				if ( is_wp_error( $user ) ) {
 					$url = esc_url( add_query_arg( 'authentication', 'failed', $url ) );
-				else {
+					
+					
+				} else {
+					
 					
 					// Check if multisite and redirect:
+					// COPYRIGHT TUCUATRO 2019
 					if ( is_multisite() ):
 					
 						$current_blog_id = get_current_blog_id();
@@ -332,12 +336,8 @@ function clean_login_load_before_headers() {
 								$url = get_site_url( $user_blogs_ids[0] );
 								switch_to_blog( $user_blogs_ids[0] );
 
-					
 							endif;
 					
-							// Change blog and redirect url:
-							
-							$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
 							$found_user = true;
 					
 					
@@ -347,22 +347,31 @@ function clean_login_load_before_headers() {
 							$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
 						endif;
 					
-					else:
+					
+						wp_safe_redirect( $url );
+						exit;
+					
+					endif;
+					
+					
 					// Not multisite: 
 					
-						// if the user is disabled
-						if( empty($user->roles) ) {
-							wp_logout();
-							$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
-						}
-						else { 
-							$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
-						}
-					endif; 
+					
+					
+					// if the user is disabled
+					if( empty($user->roles) ) {
+						wp_logout();
+						$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
+					}
+					else {
+						$url = get_option('cl_login_redirect', false) ? esc_url(apply_filters('cl_login_redirect_url', clean_login_get_translated_option_page('cl_login_redirect_url'), $user)): esc_url( add_query_arg( 'authentication', 'success', $url ) );
+						apply_filters('login_redirect', '', '', $user );
+					}
 				}
 					
 
 				wp_safe_redirect( $url );
+				exit;
 
 			// LOGOUT
 			} else if ( isset( $_REQUEST['action'] ) && $_REQUEST['action'] == 'logout' ) {
