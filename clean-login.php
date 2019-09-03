@@ -1,7 +1,7 @@
 <?php
 /**
  * @package Clean_Login
- * @version 1.9.10
+ * @version 1.9.10b
  */
 /*
 Plugin Name: Clean Login
@@ -288,6 +288,15 @@ function clean_login_load_before_headers() {
 				if ( is_wp_error( $user ) )
 					$url = esc_url( add_query_arg( 'authentication', 'failed', $url ) );
 				else {
+					/************************************/
+					/* Check if multisite and redirect: */
+					// COPYRIGHT TUCUATRO 2019
+					tucuatro_check_for_multisite( $user, $url );
+					
+					
+					// Not multisite: 
+					/************************************/
+					
 					// if the user is disabled
 					if( empty($user->roles) ) {
 						wp_logout();
@@ -1394,5 +1403,68 @@ function clean_login_load_admin_textdomain_in_frontend() {
     }
 }
 add_action( 'init', 'clean_login_load_admin_textdomain_in_frontend' );
+
+
+
+function tucuatro_check_for_multisite( $user ){
+	if ( is_multisite() ):
+					
+		$current_blog_id = get_current_blog_id();
+
+
+		$user_blogs = get_blogs_of_user( $user->ID );
+		$user_blogs_ids = array();
+
+		// Add blog id if user has a role in site:
+		// Can be expanded to check for a specific role
+		foreach ( $user_blogs AS $blog ):
+			$blog_id = $blog->userblog_id;
+
+
+			$get_users_obj = get_users(
+				array(
+					'blog_id' => $blog_id,
+					'search'  => $user->ID
+				)
+			);
+
+			// Check if user has roles in either site:
+			if ( !empty($get_users_obj[0]->roles) ):
+
+				$user_blogs_ids[] = $blog_id;
+
+			endif;
+
+		endforeach;
+
+		if ( !empty( $user_blogs_ids ) ):
+
+			// Redirect to current blog if user has access or to the first blog that user has access to:
+			if ( in_array( $current_blog_id, $user_blogs_ids ) ):
+
+				$url = $url; // wp_get_referer() already set
+
+			else: 
+
+				$url = get_site_url( $user_blogs_ids[0] );
+				switch_to_blog( $user_blogs_ids[0] );
+
+			endif;
+
+			$found_user = true;
+
+
+		else:
+			// User doesn't have any roles in any of the sites:
+			wp_logout();
+			$url = esc_url( add_query_arg( 'authentication', 'disabled', $url ) );
+		endif;
+
+
+		wp_safe_redirect( $url );
+		exit;
+
+	endif;
+}
 
 ?>
